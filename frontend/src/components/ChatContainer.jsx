@@ -60,8 +60,8 @@ export default function ChatContainer() {
                 <img
                   src={
                     message.senderId === authUser._id
-                      ? authUser.profilePic || "/avatar.png"
-                      : selectedUser.profilePic || "/avatar.png"
+                      ? authUser.profilePic || "C:\Users\Dell\Desktop\coding\Project\Chat App\frontend\src\assets\avatar.png"
+                      : selectedUser.profilePic || "C:\Users\Dell\Desktop\coding\Project\Chat App\frontend\src\assets\avatar.png"
                   }
                   alt="profile pic"
                 />
