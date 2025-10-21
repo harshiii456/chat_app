@@ -5,6 +5,7 @@ import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { formatMessageTime } from "../lib/utils";
+import avatar from "../assets/avatar.png"; // added import
 
 export default function ChatContainer() {
   const {
@@ -20,11 +21,12 @@ export default function ChatContainer() {
   const messageEndRef = useRef(null);
 
   useEffect(() => {
+    if (!selectedUser?._id) return; // guard
     getMessages(selectedUser._id);
     subscribeToMessages();
 
     return () => unsubscribeFromMessages();
-  }, [selectedUser._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
+  }, [selectedUser?._id, getMessages, subscribeToMessages, unsubscribeFromMessages]); // use optional chaining
 
   useEffect(() => {
     if (messageEndRef.current && messages) {
@@ -47,45 +49,50 @@ export default function ChatContainer() {
       <ChatHeader />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div
-            key={message._id}
-            className={`chat ${
-              message.senderId === authUser._id ? "chat-end" : "chat-start"
-            }`}
-            ref={messageEndRef}
-          >
-            <div className="chat-image avatar">
-              <div className="size-10 rounded-full border">
-                <img
-                  src={
-                    message.senderId === authUser._id
-                      ? authUser.profilePic || "C:\Users\Dell\Desktop\coding\Project\Chat App\frontend\src\assets\avatar.png"
-                      : selectedUser.profilePic || "C:\Users\Dell\Desktop\coding\Project\Chat App\frontend\src\assets\avatar.png"
-                  }
-                  alt="profile pic"
-                />
+        {messages.map((message) => {
+          const isSender =
+            String(message.senderId) === String(authUser?._id); // robust comparison
+
+          return (
+            <div
+              key={message._id}
+              className={`chat ${isSender ? "chat-end" : "chat-start"}`}
+            >
+              <div className="chat-image avatar">
+                <div className="size-10 rounded-full border">
+                  <img
+                    src={
+                      isSender
+                        ? authUser?.profilePic || avatar
+                        : selectedUser?.profilePic || avatar
+                    }
+                    alt="profile pic"
+                  />
+                </div>
+              </div>
+
+              <div className="chat-header mb-1">
+                <time className="text-xs opacity-50 ml-1">
+                  {formatMessageTime(message.createdAt)}
+                </time>
+              </div>
+
+              <div className="chat-bubble flex flex-col">
+                {message.image && (
+                  <img
+                    src={message.image}
+                    alt="Attachment"
+                    className="sm:max-w-[200px] rounded-md mb-2"
+                  />
+                )}
+                {message.text && <p>{message.text}</p>}
               </div>
             </div>
+          );
+        })}
 
-            <div className="chat-header mb-1">
-              <time className="text-xs opacity-50 ml-1">
-                {formatMessageTime(message.createdAt)}
-              </time>
-            </div>
-
-            <div className="chat-bubble flex flex-col">
-              {message.image && (
-                <img
-                  src={message.image}
-                  alt="Attachment"
-                  className="sm:max-w-[200px] rounded-md mb-2"
-                />
-              )}
-              {message.text && <p>{message.text}</p>}
-            </div>
-          </div>
-        ))}
+        {/* place ref at the end of message list so scrollIntoView scrolls to bottom */}
+        <div ref={messageEndRef} />
       </div>
 
       <MessageInput />
