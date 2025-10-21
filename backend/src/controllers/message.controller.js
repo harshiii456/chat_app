@@ -1,5 +1,8 @@
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
+import cloudinary from "../lib/cloudinary.js";
+
+import { getReceiverSocketId, io } from "../lib/socket.js";
 
 export const getUsersForSidebar = async (req, res) => {
   try {
@@ -15,15 +18,15 @@ export const getUsersForSidebar = async (req, res) => {
 
 export const getMessages = async (req, res) => {
   try {
-    const { id:userToChatId } = req.params;
-    const myId = req.user._id;
+    const { id: userToChatId } = req.params;
+    const myId = req.user._1?._id || req.user._id || req.user.id;
 
     const messages = await Message.find({
       $or: [
-        { sender: myId, receiver: userToChatId },
-        { sender: userToChatId, receiver: myId }
+        { senderId: myId, receiverId: userToChatId },
+        { senderId: userToChatId, receiverId: myId }
       ]
-    })
+    });
 
     res.status(200).json(messages);
   } catch (error) {
@@ -34,27 +37,29 @@ export const getMessages = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   try {
-    const { text, image} = req.body;
-    const { id:receiverId } = req.params;
+    const { text, image } = req.body;
+    const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
-    let imageUrl;
-    if(image){
-      // Upload image to cloudinary
+    let imageUrl = null;
+    if (image) {
       const uploadResponse = await cloudinary.uploader.upload(image);
-      imageUrl = uploadResponse.secure_url;
+      imageUrl = uploadResponse.secure_url || uploadResponse.url;
     }
 
     const newMessage = new Message({
-      sender,
-      receiver,
+      senderId,
+      receiverId,
       text,
-      image: imageUrl
+      image: imageUrl,
     });
 
     await newMessage.save();
 
-    //todo: real time functionality using socket.io
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("newMessage", newMessage);
+    }
 
     res.status(201).json(newMessage);
   } catch (error) {
